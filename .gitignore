@@ -1,0 +1,14 @@
+*.safetensors
+*.safetensors
+Project_for_using_llm/Models/PII_Names_Locations_detector_model/all_results.json
+Project_for_using_llm/Models/PII_Names_Locations_detector_model/config.json
+Project_for_using_llm/Models/PII_Names_Locations_detector_model/eval_results.json
+Project_for_using_llm/Models/PII_Names_Locations_detector_model/special_tokens_map.json
+Project_for_using_llm/Models/PII_Names_Locations_detector_model/tokenizer.json
+Project_for_using_llm/Models/PII_Names_Locations_detector_model/tokenizer_config.json
+Project_for_using_llm/Models/PII_Names_Locations_detector_model/train_results.json
+Project_for_using_llm/Models/PII_Names_Locations_detector_model/training_args.bin
+*.xml
+*.iml
+
+.venv
