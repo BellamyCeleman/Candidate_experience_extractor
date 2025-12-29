@@ -12,3 +12,4 @@ Project_for_using_llm/Models/PII_Names_Locations_detector_model/training_args.bi
 *.iml
 
 .venv
+.
