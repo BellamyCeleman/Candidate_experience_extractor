@@ -3,11 +3,9 @@ from dotenv import load_dotenv
 from opencensus.ext.azure.log_exporter import AzureLogHandler
 import logging
 
-
 # --- Helpers ---
 def str_to_bool(value: str) -> bool:
     return str(value).strip().lower() in ("1", "true", "yes")
-
 
 # --- Load .env ---
 load_dotenv(os.path.join(os.path.dirname(__file__), "..", "dev.env"))
