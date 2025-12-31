@@ -23,10 +23,11 @@ def launch_paginator_cycle(paginator_config, paginator, pdf_converter, entities_
 
     for page in paginator.pages:
 
-        print("-"*20, f"PAGE NUMBER: {paginator_config.page_number}", "-"*20, "\n")
+        if paginator_config.page_number < paginator_config.page_start:
+            print("Skipping page -", page, "\n")
+            continue
 
-        if paginator_config.page_number > paginator_config.page_end:
-            paginator_config.page_number += 1
+        print("-"*20, f"PAGE NUMBER: {paginator_config.page_number}", "-"*20, "\n")
 
         for blob in page:
             print(f"Найден: {blob.name}")
@@ -39,14 +40,15 @@ def launch_paginator_cycle(paginator_config, paginator, pdf_converter, entities_
 
                 extracted_text = pdf_converter.convert(pdf_bytes)
 
-                extracted_entities = entities_extractor.extract_entities(extracted_text)
-
-                print(extracted_entities)
-
-                file_manager.save("output.txt", extracted_entities, append="a")
-                file_manager.save("output.txt", "\n", append="a")
+                if extracted_text:
+                    extracted_entities = entities_extractor.extract_entities(extracted_text)
+                    print(extracted_entities)
+                    file_manager.save("output.txt", extracted_entities, append="a")
+                    file_manager.save("output.txt", "\n", append="a")
 
             paginator_config.page_elements_counter += 1
+
+        paginator_config.page_number += 1
 
     print(f"Всего файлов: {count}")
 
