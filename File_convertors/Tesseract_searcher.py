@@ -1,78 +1,52 @@
 import os
+import shutil
+from typing import Tuple, Optional
 
-# ================================
-# LOOKING FOR TESSERACT ON WINDOWS / LINUX
-# ================================
 
-def find_tesseract():
+def init_tesseract(verbose: bool = True) -> Tuple[bool, Optional[str]]:
     """
-    Automatically finds tesseract.exe on Windows or Linux.
+    Find and initialize Tesseract OCR.
 
     Returns:
-        str: Path to tesseract or None if not found
+        (is_available, path_to_tesseract)
     """
-    if os.name == 'nt':  # Windows
-        # Possible paths on Windows
-        possible_paths = [
+    # 1. Проверяем pytesseract
+    try:
+        import pytesseract
+    except ImportError:
+        if verbose:
+            print("⚠️  pytesseract not installed. Run: pip install pytesseract Pillow")
+        return False, None
+
+    # 2. Ищем tesseract
+    path = shutil.which('tesseract')
+
+    if not path and os.name == 'nt':  # Windows fallback
+        for p in [
             r'C:\Program Files\Tesseract-OCR\tesseract.exe',
             r'C:\Program Files (x86)\Tesseract-OCR\tesseract.exe',
-            r'C:\Tesseract-OCR\tesseract.exe',
-            os.path.expandvars(r'%LOCALAPPDATA%\Tesseract-OCR\tesseract.exe'),
-            os.path.expandvars(r'%PROGRAMFILES%\Tesseract-OCR\tesseract.exe'),
-        ]
+        ]:
+            if os.path.exists(p):
+                path = p
+                break
 
-        # Also check PATH
-        try:
-            import shutil
-            path_tesseract = shutil.which('tesseract')
-            if path_tesseract:
-                possible_paths.insert(0, path_tesseract)
-        except:
-            pass
+    if not path:
+        if verbose:
+            print("⚠️  Tesseract not found. Install: apt install tesseract-ocr / brew install tesseract")
+        return False, None
 
-        for path in possible_paths:
-            if os.path.exists(path):
-                return path
-    else:  # Linux/Mac
-        try:
-            import shutil
-            return shutil.which('tesseract')
-        except:
-            pass
+    # 3. Проверяем работоспособность
+    pytesseract.pytesseract.tesseract_cmd = path
 
-    return None
+    try:
+        pytesseract.get_tesseract_version()
+        if verbose:
+            print(f"✅ Tesseract ready: {path}")
+        return True, path
+    except Exception as e:
+        if verbose:
+            print(f"⚠️  Tesseract broken: {e}")
+        return False, path
 
-# Check OCR availability
-OCR_AVAILABLE = False
-TESSERACT_PATH = None
-
-try:
-    import pytesseract
-
-    # Automatically find tesseract
-    TESSERACT_PATH = find_tesseract()
-
-    if TESSERACT_PATH:
-        pytesseract.pytesseract.tesseract_cmd = TESSERACT_PATH
-
-        # Verify that it works
-        try:
-            version = pytesseract.get_tesseract_version()
-            OCR_AVAILABLE = True
-            print(f"✅ Tesseract found: {TESSERACT_PATH}")
-            print(f"✅ Version: {version}")
-        except Exception as e:
-            print(f"⚠️  Tesseract found at {TESSERACT_PATH}, but not working: {e}")
-            OCR_AVAILABLE = False
-    else:
-        print("⚠️  Tesseract not found in standard paths")
-        print("📝 Install Tesseract:")
-        print("   Windows: https://github.com/UB-Mannheim/tesseract/wiki")
-        print("   Linux: sudo apt-get install tesseract-ocr")
-        print("   Mac: brew install tesseract")
-        OCR_AVAILABLE = False
-
-except ImportError:
-    print("⚠️  WARNING: pytesseract not installed. OCR will be unavailable.")
-    print("   Install with: pip install pytesseract Pillow")
-    OCR_AVAILABLE = False
+if __name__ == "__main__":
+    OCR_AVAILABLE, TESSERACT_PATH = init_tesseract()
