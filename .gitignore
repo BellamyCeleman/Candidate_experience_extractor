@@ -7,4 +7,5 @@
 *.env
 dev.env
 
-Anonimizator_neural_network/Model/
+XML_Roberta_neural_network_builder/Model/
+

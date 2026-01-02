@@ -45,8 +45,9 @@ def launch_paginator_cycle(paginator_config, paginator, pdf_converter, entities_
                 if extracted_text:
                     extracted_entities = entities_extractor.extract_entities(extracted_text)
                     print(extracted_entities)
-                    file_manager.save("output.txt", extracted_entities, append=True)  # ✅ bool
-                    file_manager.save("output.txt", "\n", append=True)
+                    import json
+                    file_manager.save("output.txt", json.dumps(extracted_entities, ensure_ascii=False) + "\n",
+                                      append=True)
 
             paginator_config.page_elements_counter += 1
 
