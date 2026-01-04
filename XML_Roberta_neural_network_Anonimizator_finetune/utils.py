@@ -1,5 +1,6 @@
 import numpy as np
-from seqeval.metrics import classification_report
+from seqeval.metrics import classification_report, precision_score, recall_score, f1_score
+
 
 def align_labels_with_tokens(examples, tokenizer, max_len=512):
     """
@@ -36,14 +37,13 @@ def align_labels_with_tokens(examples, tokenizer, max_len=512):
 def compute_metrics_factory(label_list):
     """
     Возвращает функцию метрик, "замкнутую" на список меток.
-    Нужно, чтобы передать label_list внутрь Trainer.
     """
 
-    def compute_metrics(p):
-        predictions, labels = p
+    def compute_metrics(pred):
+        predictions, labels = pred
         predictions = np.argmax(predictions, axis=2)
 
-        true_predictions = [
+        true_preds = [
             [label_list[p] for (p, l) in zip(prediction, label) if l != -100]
             for prediction, label in zip(predictions, labels)
         ]
@@ -52,12 +52,10 @@ def compute_metrics_factory(label_list):
             for prediction, label in zip(predictions, labels)
         ]
 
-        results = classification_report(true_labels, true_predictions, output_dict=True)
         return {
-            "precision": results["weighted avg"]["precision"],
-            "recall": results["weighted avg"]["recall"],
-            "f1": results["weighted avg"]["f1-score"],
-            "accuracy": results["accuracy"],
+            "precision": precision_score(true_labels, true_preds),
+            "recall": recall_score(true_labels, true_preds),
+            "f1": f1_score(true_labels, true_preds),
         }
 
     return compute_metrics

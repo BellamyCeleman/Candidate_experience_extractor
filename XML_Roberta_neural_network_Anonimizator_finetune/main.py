@@ -7,10 +7,19 @@ import configs as cfg
 import data_loader
 import model_builder
 import utils
-
+import torch
 
 def main():
     print("🚀 Запуск пайплайна обучения NER...")
+
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    print(f"🖥️ Используемое устройство: {device}")
+
+    if device.type == 'cuda':
+        print(f"   GPU: {torch.cuda.get_device_name(0)}")
+        print(f"   Память: {torch.cuda.get_device_properties(0).total_memory / 1024 ** 3:.2f} GB")
+    else:
+        print("⚠️ ВНИМАНИЕ: Обучение будет идти на CPU. Это очень медленно!")
 
     # 1. Проверка и подготовка данных
     if not os.path.exists(cfg.TRAIN_FILE) or not os.path.exists(cfg.VAL_FILE):
@@ -50,7 +59,6 @@ def main():
         output_dir=cfg.OUTPUT_DIR,
         learning_rate=cfg.TRAIN_PARAMS["learning_rate"],
         per_device_train_batch_size=cfg.TRAIN_PARAMS["batch_size"],
-        per_device_eval_batch_size=cfg.TRAIN_PARAMS["batch_size"],
         num_train_epochs=cfg.TRAIN_PARAMS["num_epochs"],
         weight_decay=cfg.TRAIN_PARAMS["weight_decay"],
         eval_strategy="epoch",
@@ -58,7 +66,9 @@ def main():
         load_best_model_at_end=True,
         metric_for_best_model="f1",
         logging_dir=os.path.join(cfg.OUTPUT_DIR, "logs"),
-        fp16=(cfg.TRAIN_PARAMS["device"] == "cuda"),
+        fp16=True,  # Оставьте True, если карта серии RTX (20xx, 30xx, 40xx)
+        no_cuda=False,
+        dataloader_num_workers=0  # На Windows лучше оставить 0 или 1, чтобы избежать зависаний
     )
 
     # 6. Инициализация Trainer
