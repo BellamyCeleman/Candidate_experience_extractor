@@ -17,6 +17,10 @@ class AzureBlobContainerPaginator:
 
         self.pages = self.blobs_iterator.by_page()
 
+    def save_txt_file_to_blob(self, folder_in_container: str, content: str, overwrite: bool = True):
+        blob_client = self.container_client.get_blob_client(folder_in_container)
+        blob_client.upload_blob(content, overwrite=overwrite)
+
     # def launch_cycle(self):
     #     count = 0
     #
@@ -40,3 +44,5 @@ if __name__ == "__main__":
     print(f"Подключаюсь к контейнеру: {config.BLOB_CONTAINER_NAME}")
 
     paginator = AzureBlobContainerPaginator(config)
+
+    paginator.save_txt_file_to_blob("custom_folder/txt_file.txt", "aboba")
