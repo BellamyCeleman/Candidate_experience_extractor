@@ -3,46 +3,37 @@
 Здесь настраивается логирование для всего проекта.
 """
 
+# Init log system
 from RFC_logging_system.LoggerFactory import configure_logging, get_logger
 
-# === НАСТРОЙКА ЛОГИРОВАНИЯ (ОДИН РАЗ) ===
-# Все параметры меняются ТОЛЬКО ЗДЕСЬ
 configure_logging(
     log_to_console=True,
     log_to_file=True,
     log_to_azure=False,
-    log_file_path="logs/application.log",  # ← Меняешь путь здесь
-    log_level="INFO",  # ← Меняешь уровень здесь
+    log_file_path="logs/application.log",
+    log_level="INFO",
 )
 
-# Логгер для main модуля
 logger = get_logger("Main")
+
+# Init paginator
+from Azure_blob_container_paginator.Azure_blob_container_paginator import AzureBlobContainerPaginator
+from Azure_blob_container_paginator.console_commands_for_paginator import ConsoleArgs
 
 
 def main():
+
+    args = (
+        ConsoleArgs(description="Resume processing tool")
+        .add("page-size", short="s", type=int, default=5, help="Resumes per page")
+        .add("start-page", type=int, default=0, help="Start page")
+        .add("end-page", type=int, default=3, help="End page")
+        .add("test-files", short="t", flag=True, help="Enable PII verification")
+        .add("token", help="Continuation token")
+        .parse()
+    )
+
     logger.info("Application started")
-
-    # Пример использования ChatGPT_ErrorsCatcher
-    from ChatGPT.ChatGPT_ErrorsCatcher import ChatGPT_EntitiesCatcher
-
-    catcher = ChatGPT_EntitiesCatcher()
-
-    text = """
-    Иванов Иван Петрович
-    Python Developer в Google
-    2020-2023
-    Skills: Python, Django, AWS
-    """
-
-    no_entities, explanation = catcher.check_entities(text)
-
-    if no_entities:
-        logger.info("Текст чистый, сущностей нет")
-    else:
-        logger.warning(f"Найдены сущности:\n{explanation}")
-
-    logger.info("Application finished")
-
 
 if __name__ == "__main__":
     main()
