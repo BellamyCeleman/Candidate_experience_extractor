@@ -1,18 +1,18 @@
 # For intialization console arguments
-from src.Azure_blob_container_paginator.console_commands_for_paginator import ConsoleArgs
+from Azure_blob_container_paginator.console_commands_for_paginator import ConsoleArgs
 
 # Paginator by blob files
-from src.Azure_blob_container_paginator.Azure_blob_container_paginator import AzureBlobContainerPaginator
-from src.Azure_blob_container_paginator.config import AzureBlobContainerConfig
+from Azure_blob_container_paginator.Azure_blob_container_paginator import AzureBlobContainerPaginator
+from Azure_blob_container_paginator.config import AzureBlobContainerConfig
 
 # For extraction entities
-from src.ChatGPT.ChatGPT import ChatGPT
+from ChatGPT.ChatGPT import ChatGPT
 
 # For converting pdf-files to text
-from src.File_convertors.PDF_to_TXT_converter import PDFToTextConverter
+from File_convertors.PDF_to_TXT_converter import PDFToTextConverter
 
 # For saving text to custom path
-from src.File_manager.File_manager import FileManager
+from File_manager.File_manager import FileManager
 
 
 def launch_paginator_cycle(paginator_config, paginator, pdf_converter, entities_extractor, file_manager):

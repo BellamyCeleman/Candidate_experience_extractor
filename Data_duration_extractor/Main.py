@@ -2,8 +2,8 @@ import csv
 import sys
 from pathlib import Path
 
-from src.Data_duration_extractor.ResumeDurationCalculator import ResumeDurationCalculator
-from src.Skills_extractor_from_text.SkillsExtractor import SkillsExtractor
+from Data_duration_extractor.ResumeDurationCalculator import ResumeDurationCalculator
+from Skills_extractor_from_text.SkillsExtractor import SkillsExtractor
 
 project_root = Path(__file__).resolve().parent.parent
 sys.path.append(str(project_root))
