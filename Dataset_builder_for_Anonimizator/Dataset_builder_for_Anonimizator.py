@@ -6,7 +6,7 @@ from Azure_blob_container_paginator.Azure_blob_container_paginator import AzureB
 from Azure_blob_container_paginator.config import AzureBlobContainerConfig
 
 # For extraction entities
-from ChatGPT.ChatGPT import ChatGPT
+from ChatGPT.ChatGPT_EntitiesCatcher import ChatGPT_EntitiesCatcher
 
 # For converting pdf-files to text
 from File_convertors.PDF_to_TXT_converter import PDFToTextConverter
@@ -14,28 +14,35 @@ from File_convertors.PDF_to_TXT_converter import PDFToTextConverter
 # For saving text to custom path
 from File_manager.File_manager import FileManager
 
+# For logging
+from RFC_logging_system.LoggerFactory import get_logger
+
 
 def launch_paginator_cycle(paginator_config, paginator, pdf_converter, entities_extractor, file_manager):
+    # Создаем логгер для DatasetBuilder
+    logger = get_logger("DatasetBuilder")
+    
     page_start = paginator_config.page_start or 0
     page_end = paginator_config.page_end or float('inf')
 
     if page_start > page_end:
+        logger.warning(f"Page start ({page_start}) is greater than page end ({page_end})")
         return
 
     for page in paginator.pages:
 
         if paginator_config.page_number < page_start:
-            print(f"Skipping page {paginator_config.page_number}")
+            logger.info(f"Skipping page {paginator_config.page_number}")
             paginator_config.page_number += 1  # ✅ инкремент при пропуске
             continue
 
         if paginator_config.page_number > page_end:  # ✅ проверка на page_end
             break
 
-        print("-" * 20, f"PAGE NUMBER: {paginator_config.page_number}", "-" * 20, "\n")
+        logger.info("-" * 20 + f" PAGE NUMBER: {paginator_config.page_number} " + "-" * 20)
 
         for blob in page:
-            print(f"Найден: {blob.name}")
+            logger.info(f"Found: {blob.name}")
 
             if blob.name.endswith('.pdf'):
                 blob_client = paginator.container_client.get_blob_client(blob.name)
@@ -43,8 +50,8 @@ def launch_paginator_cycle(paginator_config, paginator, pdf_converter, entities_
                 extracted_text = pdf_converter.convert(pdf_bytes)
 
                 if extracted_text:
-                    extracted_entities = entities_extractor.extract_entities(extracted_text)
-                    print(extracted_entities)
+                    extracted_entities = entities_extractor.check_entities(extracted_text)
+                    logger.info(f"Extracted entities: {extracted_entities}")
                     import json
                     file_manager.save("output.txt", json.dumps(extracted_entities, ensure_ascii=False) + "\n",
                                       append=True)
@@ -53,7 +60,7 @@ def launch_paginator_cycle(paginator_config, paginator, pdf_converter, entities_
 
         paginator_config.page_number += 1
 
-    print(f"Всего файлов: {paginator_config.page_elements_counter}")  # ✅ актуальное значение
+    logger.info(f"Total files processed: {paginator_config.page_elements_counter}")  # ✅ актуальное значение
 
 if __name__ == "__main__":
     # Init console flags
@@ -71,7 +78,7 @@ if __name__ == "__main__":
     text_converter = PDFToTextConverter()
 
     # Chat gpt for extracting entities
-    entities_extractor = ChatGPT()
+    entities_extractor = ChatGPT_EntitiesCatcher()
 
     # File manager for saving text to custom file
     file_manager = FileManager(base_dir="datasets")
