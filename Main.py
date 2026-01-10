@@ -6,14 +6,6 @@
 # Init log system
 from RFC_logging_system.LoggerFactory import configure_logging, get_logger
 
-configure_logging(
-    log_to_console=True,
-    log_to_file=True,
-    log_to_azure=False,
-    log_file_path="logs/application.log",
-    log_level="INFO",
-)
-
 logger = get_logger("Main")
 
 # Init paginator
