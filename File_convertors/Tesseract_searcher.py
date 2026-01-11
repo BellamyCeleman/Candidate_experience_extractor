@@ -1,6 +1,7 @@
 import os
 import shutil
 from typing import Tuple, Optional
+from RFC_logging_system.LoggerFactory import get_logger
 
 
 def init_tesseract(verbose: bool = True) -> Tuple[bool, Optional[str]]:
@@ -15,7 +16,8 @@ def init_tesseract(verbose: bool = True) -> Tuple[bool, Optional[str]]:
         import pytesseract
     except ImportError:
         if verbose:
-            print("⚠️  pytesseract not installed. Run: pip install pytesseract Pillow")
+            logger = get_logger("TesseractSearcher")
+            logger.warning("⚠️  pytesseract not installed. Run: pip install pytesseract Pillow")
         return False, None
 
     # 2. Ищем tesseract
@@ -32,7 +34,8 @@ def init_tesseract(verbose: bool = True) -> Tuple[bool, Optional[str]]:
 
     if not path:
         if verbose:
-            print("⚠️  Tesseract not found. Install: apt install tesseract-ocr / brew install tesseract")
+            logger = get_logger("TesseractSearcher")
+            logger.warning("⚠️  Tesseract not found. Install: apt install tesseract-ocr / brew install tesseract")
         return False, None
 
     # 3. Проверяем работоспособность
@@ -41,11 +44,13 @@ def init_tesseract(verbose: bool = True) -> Tuple[bool, Optional[str]]:
     try:
         pytesseract.get_tesseract_version()
         if verbose:
-            print(f"✅ Tesseract ready: {path}")
+            logger = get_logger("TesseractSearcher")
+            logger.info(f"✅ Tesseract ready: {path}")
         return True, path
     except Exception as e:
         if verbose:
-            print(f"⚠️  Tesseract broken: {e}")
+            logger = get_logger("TesseractSearcher")
+            logger.error(f"⚠️  Tesseract broken: {e}")
         return False, path
 
 if __name__ == "__main__":

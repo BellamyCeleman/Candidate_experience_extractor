@@ -1,39 +1,163 @@
 """
-Точка входа в приложение.
-Здесь настраивается логирование для всего проекта.
+Resume Anonymization Pipeline
+Скачивает резюме из Azure Blob → Анонимизирует → Проверяет на PII
 """
 
-# Init log system
 from RFC_logging_system.LoggerFactory import configure_logging, get_logger
-
-configure_logging(
-    log_to_console=True,
-    log_to_file=True,
-    log_to_azure=False,
-    log_file_path="logs/application.log",
-    log_level="INFO",
-)
+from Azure_blob_container_paginator.Azure_blob_container_paginator import AzureBlobContainerPaginator
+from Azure_blob_container_paginator.config import AzureBlobContainerConfig
+from Azure_blob_container_paginator.console_commands_for_paginator import ConsoleArgs
+from XLM_RoBerta_entities_extractor.XLM_RoBerta_entities_extractor import init_extractor, anonymize_text
+from ChatGPT.ChatGPT_EntitiesCatcher import ChatGPT_EntitiesCatcher
+from File_convertors.PDF_to_TXT_converter import PDFToTextConverter
 
 logger = get_logger("Main")
 
-# Init paginator
-from Azure_blob_container_paginator.Azure_blob_container_paginator import AzureBlobContainerPaginator
-from Azure_blob_container_paginator.console_commands_for_paginator import ConsoleArgs
 
+# ─────────────────────────────────────────────────────────────
+# Core Functions
+# ─────────────────────────────────────────────────────────────
+
+def extract_text(blob_client) -> str:
+    """Извлекает текст из PDF или TXT файла."""
+    name = blob_client.blob_name
+    data = blob_client.download_blob().readall()
+
+    if name.lower().endswith('.pdf'):
+        return PDFToTextConverter().convert(data) or ""
+
+    if name.lower().endswith('.txt'):
+        return data.decode('utf-8', errors='ignore')
+
+    logger.warning(f"Unsupported format: {name}")
+    return ""
+
+
+def process_resume(text: str, name: str, verify_with_gpt: bool) -> bool:
+    """
+    Анонимизирует резюме и проверяет на остатки PII.
+
+    Returns:
+        True = успех (PII не найдено), False = провал (PII найдено или ошибка)
+    """
+
+    # 1. Анонимизация
+    try:
+        result = anonymize_text(text, placeholder_format="[REDACTED]")
+        anon_text = result["anonymized_text"]
+        replacements = result["replacements"]
+        logger.info(f"{name}: {len(replacements)} entities replaced")
+    except Exception as e:
+        logger.error(f"{name}: Anonymization failed - {e}")
+        return False
+
+    # 2. Проверка GPT (если включена)
+    if not verify_with_gpt:
+        return True
+
+    try:
+        catcher = ChatGPT_EntitiesCatcher()
+        is_clean, explanation = catcher.check_entities(anon_text)
+
+        if not is_clean:
+            logger.error(f"{name}: FAILED - PII still found: {explanation}")
+            return False
+
+        logger.info(f"{name}: PASSED - no PII detected")
+        return True
+
+    except Exception as e:
+        logger.error(f"{name}: GPT check failed - {e}")
+        return False
+
+
+def process_batch(paginator: AzureBlobContainerPaginator,
+                  start: int, end: int, verify: bool) -> tuple[int, int, int]:
+    """
+    Обрабатывает страницы резюме из Azure Blob.
+
+    Returns:
+        (total, passed, failed) — счётчики
+    """
+    total = passed = failed = 0
+    pages = paginator.blobs_iterator.by_page()
+
+    for page_num in range(end + 1):
+        try:
+            page = next(pages)
+        except StopIteration:
+            logger.info(f"No more pages after {page_num - 1}")
+            break
+
+        if page_num < start:
+            logger.debug(f"Skipping page {page_num}")
+            continue
+
+        logger.info(f"─── Page {page_num} ───")
+
+        for blob in page:
+            total += 1
+
+            blob_client = paginator.container_client.get_blob_client(blob.name)
+            text = extract_text(blob_client)
+
+            if not text.strip():
+                logger.warning(f"{blob.name}: Empty file")
+                failed += 1
+                continue
+
+            if process_resume(text, blob.name, verify):
+                passed += 1
+            else:
+                failed += 1
+
+    return total, passed, failed
+
+
+# ─────────────────────────────────────────────────────────────
+# Entry Point
+# ─────────────────────────────────────────────────────────────
 
 def main():
 
+    logger.info("Starting Resume Anonymization Pipeline")
+
+    # CLI args
     args = (
-        ConsoleArgs(description="Resume processing tool")
+        ConsoleArgs(description="Resume anonymization tool")
         .add("page-size", short="s", type=int, default=5, help="Resumes per page")
         .add("start-page", type=int, default=0, help="Start page")
         .add("end-page", type=int, default=3, help="End page")
-        .add("test-files", short="t", flag=True, help="Enable PII verification")
-        .add("token", help="Continuation token")
+        .add("test-files", short="t", flag=True, help="Verify with ChatGPT")
         .parse()
     )
 
-    logger.info("Application started")
+    # Init
+    config = AzureBlobContainerConfig()
+    config.page_size = args.page_size
+
+    paginator = AzureBlobContainerPaginator(config)
+    paginator.blobs_iterator = paginator.container_client.list_blobs(
+        results_per_page=args.page_size,
+        name_starts_with=config.BLOB_PREFIX
+    )
+
+    init_extractor()
+    logger.info("Components initialized")
+
+    # Process
+    total, passed, failed = process_batch(
+        paginator, args.start_page, args.end_page, args.test_files
+    )
+
+    # Summary
+    logger.info("=" * 50)
+    logger.info(f"TOTAL:  {total}")
+    logger.info(f"PASSED: {passed}")
+    logger.info(f"FAILED: {failed}")
+    logger.info(f"Rate:   {passed / max(total, 1) * 100:.1f}%")
+    logger.info("=" * 50)
+
 
 if __name__ == "__main__":
     main()

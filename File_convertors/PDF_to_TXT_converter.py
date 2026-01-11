@@ -4,12 +4,14 @@ import pdfplumber
 from PIL import Image
 from .Tesseract_searcher import init_tesseract
 import pytesseract
+from RFC_logging_system.LoggerFactory import get_logger
 
 class PDFToTextConverter:
     """Конвертер PDF в текст с поддержкой OCR."""
 
     def __init__(self):
         # Looking for tessearc on PC
+        self.logger = get_logger("PDFConverter")
         self.OCR_AVAILABLE, self.TESSERACT_PATH = init_tesseract()
 
     def convert(self, pdf_bytes: bytes, use_fallback: bool = True, use_ocr: bool = True) -> str | None:
@@ -17,21 +19,31 @@ class PDFToTextConverter:
         Конвертирует PDF в текст.
         """
         # Попытка 1: pdfplumber
+        self.logger.info("Attempting to extract text with pdfplumber")
         text = self._extract_with_pdfplumber(pdf_bytes)
         if text:
+            self.logger.info("Successfully extracted text with pdfplumber")
             return text
+        else:
+            self.logger.info("Failed to extract text with pdfplumber, trying fallback method")
 
         # Попытка 2: PyMuPDF
         if use_fallback:
             text = self._extract_with_pymupdf(pdf_bytes)
             if text:
+                self.logger.info("Successfully extracted text with PyMuPDF")
                 return text
+            else:
+                self.logger.info("Failed to extract text with PyMuPDF, trying OCR")
 
         # Попытка 3: OCR
         if use_ocr:
             text = self._extract_with_ocr(pdf_bytes)
             if text:
+                self.logger.info("Successfully extracted text with OCR")
                 return text
+            else:
+                self.logger.warning("Failed to extract text with OCR")
 
         return None
 
@@ -48,9 +60,15 @@ class PDFToTextConverter:
                     if page_text and page_text.strip():
                         pages_text.append(page_text)
 
-                return "\n".join(pages_text) if pages_text else None
+                result = "\n".join(pages_text) if pages_text else None
+                if result:
+                    self.logger.info(f"Successfully extracted text from {len(pages_text)} pages using pdfplumber")
+                else:
+                    self.logger.warning("No text found using pdfplumber")
+                return result
 
-        except Exception:
+        except Exception as e:
+            self.logger.error(f"Error extracting text with pdfplumber: {e}")
             return None
 
     def _extract_with_pymupdf(self, pdf_bytes: bytes) -> str | None:
@@ -67,14 +85,21 @@ class PDFToTextConverter:
                     pages_text.append(page_text)
 
             doc.close()
-            return "\n".join(pages_text) if pages_text else None
+            result = "\n".join(pages_text) if pages_text else None
+            if result:
+                self.logger.info(f"Successfully extracted text from {len(pages_text)} pages using PyMuPDF")
+            else:
+                self.logger.warning("No text found using PyMuPDF")
+            return result
 
-        except Exception:
+        except Exception as e:
+            self.logger.error(f"Error extracting text with PyMuPDF: {e}")
             return None
 
     def _extract_with_ocr(self, pdf_bytes: bytes) -> str | None:
         """Извлечение текста через OCR (для сканированных документов)."""
         if not self.OCR_AVAILABLE:
+            self.logger.warning("OCR not available, skipping OCR extraction")
             return None
 
         try:
@@ -94,9 +119,15 @@ class PDFToTextConverter:
                     pages_text.append(page_text.strip())
 
             doc.close()
-            return "\n\n".join(pages_text) if pages_text else None
+            result = "\n\n".join(pages_text) if pages_text else None
+            if result:
+                self.logger.info(f"Successfully extracted text from {len(pages_text)} pages using OCR")
+            else:
+                self.logger.warning("No text found using OCR")
+            return result
 
-        except Exception:
+        except Exception as e:
+            self.logger.error(f"Error extracting text with OCR: {e}")
             return None
 
 

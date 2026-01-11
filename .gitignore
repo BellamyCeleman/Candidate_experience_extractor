@@ -23,3 +23,9 @@ XML_Roberta_neural_network_Anonimizator_finetune/venv/
 /XML_Roberta_neural_network_Anonimizator_finetune/ner_model_output
 
 *.json
+
+__pycache__/
+*.pyc
+*.pyc
+*.pyc
+*.pyc
