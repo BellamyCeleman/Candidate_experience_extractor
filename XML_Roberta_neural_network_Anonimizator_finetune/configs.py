@@ -20,8 +20,8 @@ MODEL_CONFIG = {
 # === ПАРАМЕТРЫ ОБУЧЕНИЯ ===
 TRAIN_PARAMS = {
     "learning_rate": 3e-5,
-    "batch_size": 20,
-    "num_epochs": 1,
+    "batch_size": 16,
+    "num_epochs": 10,
     "weight_decay": 0.01,
     "device": "cuda",
     "patience": 3
@@ -31,4 +31,4 @@ TRAIN_PARAMS = {
 # 'new'      - обучение с нуля
 # 'continue' - продолжение обучения той же модели
 # 'extend'   - добавление новых сущностей к старой модели
-TRAINING_MODE = "new"
+TRAINING_MODE = "continue"

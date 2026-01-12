@@ -10,6 +10,7 @@ from Azure_blob_container_paginator.console_commands_for_paginator import Consol
 from XLM_RoBerta_entities_extractor.XLM_RoBerta_entities_extractor import init_extractor, anonymize_text
 from ChatGPT.ChatGPT_EntitiesCatcher import ChatGPT_EntitiesCatcher
 from File_convertors.PDF_to_TXT_converter import PDFToTextConverter
+import os
 
 logger = get_logger("Main")
 
@@ -114,6 +115,65 @@ def process_batch(paginator: AzureBlobContainerPaginator,
     return total, passed, failed
 
 
+def export_for_labeling(paginator: AzureBlobContainerPaginator, start: int, end: int):
+    """
+    Скачивает резюме, разбивает на слова и сохраняет в файл.
+    Каждое слово с новой строки. Между резюме — пустая строка.
+    """
+
+    # Путь к файлу
+    output_dir = "Candidate_experience_extractor"
+    output_file = os.path.join(output_dir, "dataset_labeling.txt")
+
+    # Создаем папку, если её нет
+    os.makedirs(output_dir, exist_ok=True)
+
+    logger.info(f"Writing dataset to: {output_file}")
+
+    # Открываем файл в режиме 'a' (append), чтобы дописывать данные, а не перезатирать
+    # Если нужно перезатирать каждый раз, замените 'a' на 'w'
+    with open(output_file, "a", encoding="utf-8") as f:
+
+        pages = paginator.blobs_iterator.by_page()
+        processed_count = 0
+
+        for page_num in range(end + 1):
+            try:
+                page = next(pages)
+            except StopIteration:
+                break
+
+            if page_num < start:
+                continue
+
+            logger.info(f"Processing Page {page_num}...")
+
+            for blob in page:
+                blob_client = paginator.container_client.get_blob_client(blob.name)
+                text = extract_text(blob_client)
+
+                if not text.strip():
+                    continue
+
+                # 1. Разбиваем текст на слова (split по умолчанию делит по пробелам, табам и энтерам)
+                words = text.split()
+
+                if not words:
+                    continue
+
+                # 2. Записываем слова: каждое с новой строки
+                f.write('\n'.join(words))
+
+                # 3. Добавляем разделитель (пустую строку) между резюме
+                # Одиночный \n перенесет курсор после последнего слова
+                # Двойной \n создаст пустую строку между блоками
+                f.write('\n\n')
+
+                processed_count += 1
+                logger.info(f"Saved: {blob.name} ({len(words)} words)")
+
+    logger.info(f"Done. Processed {processed_count} resumes.")
+
 # ─────────────────────────────────────────────────────────────
 # Entry Point
 # ─────────────────────────────────────────────────────────────
@@ -142,21 +202,23 @@ def main():
         name_starts_with=config.BLOB_PREFIX
     )
 
-    init_extractor()
-    logger.info("Components initialized")
+    export_for_labeling(paginator, args.start_page, args.end_page)
 
-    # Process
-    total, passed, failed = process_batch(
-        paginator, args.start_page, args.end_page, args.test_files
-    )
-
-    # Summary
-    logger.info("=" * 50)
-    logger.info(f"TOTAL:  {total}")
-    logger.info(f"PASSED: {passed}")
-    logger.info(f"FAILED: {failed}")
-    logger.info(f"Rate:   {passed / max(total, 1) * 100:.1f}%")
-    logger.info("=" * 50)
+    # init_extractor()
+    # logger.info("Components initialized")
+    #
+    # # Process
+    # total, passed, failed = process_batch(
+    #     paginator, args.start_page, args.end_page, args.test_files
+    # )
+    #
+    # # Summary
+    # logger.info("=" * 50)
+    # logger.info(f"TOTAL:  {total}")
+    # logger.info(f"PASSED: {passed}")
+    # logger.info(f"FAILED: {failed}")
+    # logger.info(f"Rate:   {passed / max(total, 1) * 100:.1f}%")
+    # logger.info("=" * 50)
 
 
 if __name__ == "__main__":
