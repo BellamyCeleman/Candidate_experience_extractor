@@ -5,8 +5,17 @@ import re
 
 
 class ResumeDurationCalculator:
-   def __init__(self, model_name: str = "phi4"):
+   def __init__(self, model_name: str = "phi4", *, auto_pull_model: bool = True):
       self.model_name = model_name
+
+      # Ensure required Ollama model is available locally (e.g. "phi4").
+      # Keep imports resilient whether this file is run as a module or directly.
+      try:
+         from Data_duration_extractor.ollama_model_manager import ensure_ollama_model
+      except Exception:
+         from ollama_model_manager import ensure_ollama_model  # type: ignore
+
+      ensure_ollama_model(self.model_name, pull_if_missing=auto_pull_model)
 
    def get_duration(self, date_input: str) -> dict:
       current_date_str = datetime.date.today().strftime("%Y-%m-%d")

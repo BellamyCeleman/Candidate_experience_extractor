@@ -202,23 +202,23 @@ def main():
         name_starts_with=config.BLOB_PREFIX
     )
 
-    export_for_labeling(paginator, args.start_page, args.end_page)
+    # export_for_labeling(paginator, args.start_page, args.end_page)
 
-    # init_extractor()
-    # logger.info("Components initialized")
-    #
-    # # Process
-    # total, passed, failed = process_batch(
-    #     paginator, args.start_page, args.end_page, args.test_files
-    # )
-    #
-    # # Summary
-    # logger.info("=" * 50)
-    # logger.info(f"TOTAL:  {total}")
-    # logger.info(f"PASSED: {passed}")
-    # logger.info(f"FAILED: {failed}")
-    # logger.info(f"Rate:   {passed / max(total, 1) * 100:.1f}%")
-    # logger.info("=" * 50)
+    init_extractor()
+    logger.info("Components initialized")
+    
+    # Process
+    total, passed, failed = process_batch(
+        paginator, args.start_page, args.end_page, args.test_files
+    )
+    
+    # Summary
+    logger.info("=" * 50)
+    logger.info(f"TOTAL:  {total}")
+    logger.info(f"PASSED: {passed}")
+    logger.info(f"FAILED: {failed}")
+    logger.info(f"Rate:   {passed / max(total, 1) * 100:.1f}%")
+    logger.info("=" * 50)
 
 
 if __name__ == "__main__":
